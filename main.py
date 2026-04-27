@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 import argparse
+from system_prompt import system_prompt
 
 def main():
     parser = argparse.ArgumentParser(description='Clanker')
@@ -20,6 +21,7 @@ def main():
     response = client.models.generate_content(
             model = "gemini-2.5-flash",
             contents= messages,
+            config=types.GenerateContentConfig(system_instruction=system_prompt),
             )
     if not response.usage_metadata:
         raise RuntimeError("Tokens no work")
