@@ -1,4 +1,22 @@
 import os
+from google.genai import types
+
+schema_get_file_content = types.FunctionDeclaration(
+    name="get_file_content",
+    description="List the content within the file",
+    parameters=types.Schema(
+        required=["file_path"],
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="lists the working directory",
+            ),
+        },
+    ),
+)
+
+
 def get_file_content(working_directory, file_path):
     current = os.path.abspath(working_directory)
     target_dir = os.path.normpath(os.path.join(current, file_path))
