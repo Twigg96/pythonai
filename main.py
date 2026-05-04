@@ -4,7 +4,7 @@ from google import genai
 from google.genai import types
 import argparse
 from system_prompt import system_prompt
-from call_function import available_functions
+from call_function import available_functions,call_function
 
 def main():
     parser = argparse.ArgumentParser(description='Clanker')
@@ -18,6 +18,7 @@ def main():
     if not api_key:
         raise RuntimeError("Clanker isn't working")
 
+
     client = genai.Client(api_key=api_key)
     response = client.models.generate_content(
             model = "gemini-2.5-flash",
@@ -28,10 +29,24 @@ def main():
     if not response.usage_metadata:
         raise RuntimeError("Tokens no work")
 
-    if response.function_calls is not None:
-        for responses in response.function_calls:
-            print(f"Calling function: {responses.name}({responses.args})")
+    function_call_list = []
 
+    if response.function_calls is not None:
+        for fc in response.function_calls:
+            result = call_function(fc, verbose=args.verbose)
+
+            if not result.parts:
+                raise Exception("No parts list")
+
+            if not result.parts[0].function_response:
+                raise Exception("There is no function response")
+
+            if not result.parts[0].function_response.response:
+                raise Exception("There is no response")
+            function_call_list.append(result.parts[0])
+
+            if args.verbose:
+                print(f"-> {result.parts[0].function_response.response}")
     else:
         print(response.text)
 
@@ -41,3 +56,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
