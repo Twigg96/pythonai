@@ -4,6 +4,7 @@ from google import genai
 from google.genai import types
 import argparse
 from system_prompt import system_prompt
+from call_function import available_functions
 
 def main():
     parser = argparse.ArgumentParser(description='Clanker')
@@ -21,19 +22,17 @@ def main():
     response = client.models.generate_content(
             model = "gemini-2.5-flash",
             contents= messages,
-            config=types.GenerateContentConfig(system_instruction=system_prompt),
+            config=types.GenerateContentConfig(
+                tools=[available_functions], system_instruction=system_prompt,)
             )
     if not response.usage_metadata:
         raise RuntimeError("Tokens no work")
 
-    if args.verbose:
-        print(f"User prompt: {args.user_prompt}")
-        print("Prompt tokens:", response.usage_metadata.prompt_token_count)
-        print("Response tokens:", response.usage_metadata.candidates_token_count)
-        print("Response:")
-        print(response.text)
+    if response.function_calls is not None:
+        for responses in response.function_calls:
+            print(f"Calling function: {responses.name}({responses.args})")
+
     else:
-        print("Response:")
         print(response.text)
 
 
