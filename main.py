@@ -5,8 +5,9 @@ from google.genai import types
 import argparse
 from system_prompt import system_prompt
 from call_function import available_functions,call_function
+import sys
 
-def generate_content(client, messages):
+def generate_content(client, messages, verbose):
     response = client.models.generate_content(
             model = "gemini-2.5-flash",
             contents= messages,
@@ -19,10 +20,6 @@ def generate_content(client, messages):
 
 def handle_function_calls(response, verbose):
     function_call_list = []
-    if response.function_calls is None:
-        print(response.text)
-        return function_call_list
-
     for fc in response.function_calls:
         result = call_function(fc, verbose=verbose)
 
@@ -35,8 +32,8 @@ def handle_function_calls(response, verbose):
 
         function_call_list.append(result.parts[0])
 
-        if verbose:
-            print(f"-> {result.parts[0].function_response.response}")
+    if verbose:
+        print(f"-> {result.parts[0].function_response.response}")
 
     return function_call_list
 
@@ -52,8 +49,20 @@ def main():
     messages = [types.Content(role="user", parts=[types.Part(text=args.user_prompt)])]
     if not api_key:
         raise RuntimeError("Clanker isn't working")
-    response = generate_content(client, messages)
-    handle_function_calls(response, args.verbose)
+
+    for _ in range(20):
+        response = generate_content(client, messages, args.verbose)
+        if response.candidates:
+            for candidate in response.candidates:
+                messages.append(candidate.content)
+        if not response.function_calls:
+            print('Final response:')
+            print(response.text)
+            return
+        function_responses = handle_function_calls(response, args.verbose)
+        messages.append(types.Content(role='user', parts=function_responses))
+    print('Max number of iterations hit')
+    sys.exit(1)
 
 
 if __name__ == "__main__":
